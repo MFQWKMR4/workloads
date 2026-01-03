@@ -1,15 +1,16 @@
-use crate::orchestrator::config::{ConfigError, Step, step_processes, step_stdout, task_count};
+use crate::orchestrator::cache::CacheContext;
+use crate::orchestrator::config::{Step, step_processes, step_stdout, task_count};
 use crate::orchestrator::process::{spawn_process, wait_process};
 use crate::orchestrator::source::resolve_source;
 use std::error::Error;
 use std::path::Path;
 use std::process::Command;
 
-pub(crate) fn run(step: &Step) -> Result<(), Box<dyn Error>> {
+pub(crate) fn run(step: &Step, cache: &CacheContext) -> Result<(), Box<dyn Error>> {
     let count = task_count(step)?;
     let processes = step_processes(step);
     let stdout_enabled = step_stdout(step);
-    let source = resolve_source(step, Path::new("runtimes/golang/main.go"), "go")?;
+    let source = resolve_source(step, Path::new("runtimes/golang/main.go"), "go", cache)?;
 
     let count_label = count
         .map(|value| value.to_string())

@@ -1,0 +1,64 @@
+use sha2::{Digest, Sha256};
+use std::path::PathBuf;
+
+pub(crate) struct CacheContext {
+    pub(crate) config_hash: String,
+    pub(crate) base_dir: PathBuf,
+    pub(crate) config_dir: PathBuf,
+    pub(crate) url_dir: PathBuf,
+}
+
+impl CacheContext {
+    pub(crate) fn url_source_path(&self, url: &str, extension: &str) -> PathBuf {
+        let url_hash = hash_string(url);
+        self.url_dir
+            .join(url_hash)
+            .join(format!("source.{extension}"))
+    }
+
+    pub(crate) fn config_source_path(&self, url: &str, extension: &str) -> PathBuf {
+        let url_hash = hash_string(url);
+        self.config_dir
+            .join("sources")
+            .join(format!("{url_hash}.{extension}"))
+    }
+}
+
+pub(crate) fn cache_context(config_content: &str) -> CacheContext {
+    let config_hash = hash_string(config_content);
+    let base_dir = cache_base_dir().join("wl");
+    let config_dir = base_dir.join("config").join(&config_hash);
+    let url_dir = base_dir.join("url");
+
+    CacheContext {
+        config_hash,
+        base_dir,
+        config_dir,
+        url_dir,
+    }
+}
+
+fn cache_base_dir() -> PathBuf {
+    if let Ok(dir) = std::env::var("XDG_CACHE_HOME") {
+        return PathBuf::from(dir);
+    }
+    if let Ok(home) = std::env::var("HOME") {
+        return PathBuf::from(home).join(".cache");
+    }
+    std::env::temp_dir().join("wl-cache")
+}
+
+fn hash_string(value: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(value.as_bytes());
+    bytes_to_hex(&hasher.finalize())
+}
+
+fn bytes_to_hex(bytes: &[u8]) -> String {
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        use std::fmt::Write;
+        let _ = write!(out, "{:02x}", byte);
+    }
+    out
+}

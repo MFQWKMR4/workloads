@@ -1,4 +1,5 @@
 mod config;
+mod cache;
 mod process;
 mod samples;
 mod source;
@@ -8,6 +9,7 @@ mod golang;
 mod node;
 mod python;
 
+use crate::orchestrator::cache::{CacheContext, cache_context};
 use crate::orchestrator::config::{Config, ConfigError, validate_config};
 use std::error::Error;
 use std::fs;
@@ -76,13 +78,13 @@ pub fn list_available() -> Result<(), Box<dyn Error>> {
 }
 
 pub fn prepare(config_path: &Path) -> Result<(), Box<dyn Error>> {
-    let config = load_config(config_path)?;
-    validate_config(&config)?;
-    for step in &config.steps {
+    let loaded = load_config(config_path)?;
+    validate_config(&loaded.config)?;
+    for step in &loaded.config.steps {
         ensure_runtime_available(&step.runtime)?;
     }
 
-    for step in &config.steps {
+    for step in &loaded.config.steps {
         println!("prepare: runtime={}", step.runtime);
     }
     println!("prepare: python does not require build steps");
@@ -91,17 +93,17 @@ pub fn prepare(config_path: &Path) -> Result<(), Box<dyn Error>> {
 }
 
 pub fn generate(config_path: &Path) -> Result<(), Box<dyn Error>> {
-    let config = load_config(config_path)?;
-    validate_config(&config)?;
-    for step in &config.steps {
+    let loaded = load_config(config_path)?;
+    validate_config(&loaded.config)?;
+    for step in &loaded.config.steps {
         ensure_runtime_available(&step.runtime)?;
         let runtime = step.runtime.to_lowercase();
         if runtime == "python" || runtime == "python3" || runtime == "cpython" {
-            python::run(step)?;
+            python::run(step, &loaded.cache)?;
         } else if runtime == "node" || runtime == "node.js" {
-            node::run(step)?;
+            node::run(step, &loaded.cache)?;
         } else if runtime == "golang" || runtime == "go" {
-            golang::run(step)?;
+            golang::run(step, &loaded.cache)?;
         } else if runtime == "bin" {
             bin::run(step)?;
         } else if runtime == "shell" {
@@ -121,10 +123,18 @@ pub fn samples(output_dir: &Path) -> Result<(), Box<dyn Error>> {
     samples::write_samples(output_dir)
 }
 
-fn load_config(config_path: &Path) -> Result<Config, Box<dyn Error>> {
+struct LoadedConfig {
+    config: Config,
+    cache: CacheContext,
+}
+
+fn load_config(config_path: &Path) -> Result<LoadedConfig, Box<dyn Error>> {
     let content = fs::read_to_string(config_path)?;
+    let cache = cache_context(&content);
+    fs::create_dir_all(&cache.config_dir)?;
+    fs::create_dir_all(&cache.url_dir)?;
     let config: Config = serde_yaml::from_str(&content)?;
-    Ok(config)
+    Ok(LoadedConfig { config, cache })
 }
 
 fn ensure_runtime_available(runtime: &str) -> Result<(), Box<dyn Error>> {

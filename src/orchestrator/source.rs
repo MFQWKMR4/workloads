@@ -1,8 +1,8 @@
+use crate::orchestrator::cache::CacheContext;
 use crate::orchestrator::config::{ConfigError, Step};
 use std::error::Error;
 use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 pub(crate) struct ResolvedSource {
     pub(crate) path: PathBuf,
@@ -21,6 +21,7 @@ pub(crate) fn resolve_source(
     step: &Step,
     default_path: &Path,
     extension: &str,
+    cache: &CacheContext,
 ) -> Result<ResolvedSource, Box<dyn Error>> {
     let location = match &step.location {
         Some(location) => location,
@@ -33,12 +34,26 @@ pub(crate) fn resolve_source(
     };
 
     if is_http_url(location) {
-        let bytes = download_bytes(location)?;
-        let temp_path = temp_file_path(extension);
-        std::fs::write(&temp_path, bytes)?;
+        let url_cache_path = cache.url_source_path(location, extension);
+        if !url_cache_path.exists() {
+            if let Some(parent) = url_cache_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            let bytes = download_bytes(location)?;
+            std::fs::write(&url_cache_path, bytes)?;
+        }
+
+        let config_cache_path = cache.config_source_path(location, extension);
+        if !config_cache_path.exists() {
+            if let Some(parent) = config_cache_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::copy(&url_cache_path, &config_cache_path)?;
+        }
+
         Ok(ResolvedSource {
-            path: temp_path,
-            cleanup: true,
+            path: config_cache_path,
+            cleanup: false,
         })
     } else {
         let path = PathBuf::from(location);
@@ -71,14 +86,4 @@ fn download_bytes(url: &str) -> Result<Vec<u8>, Box<dyn Error>> {
     let mut bytes = Vec::new();
     response.into_reader().read_to_end(&mut bytes)?;
     Ok(bytes)
-}
-
-fn temp_file_path(extension: &str) -> PathBuf {
-    let pid = std::process::id();
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_nanos();
-    let filename = format!("wl_remote_{}_{}.{}", pid, nanos, extension);
-    std::env::temp_dir().join(filename)
 }

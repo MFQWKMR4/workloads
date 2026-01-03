@@ -63,6 +63,12 @@ pub(crate) fn wait_process(
     if let Some(handle) = tracker.stdout.take() {
         let _ = handle.join();
     }
+    if !status.success() {
+        return Err(Box::new(io::Error::new(
+            io::ErrorKind::Other,
+            format!("process pid {} exited with {}", tracker.pid, code),
+        )));
+    }
     Ok(())
 }
 
