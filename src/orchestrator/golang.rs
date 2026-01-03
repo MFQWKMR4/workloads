@@ -1,46 +1,63 @@
 use crate::orchestrator::cache::CacheContext;
-use crate::orchestrator::config::{Step, step_processes, step_stdout, task_count};
-use crate::orchestrator::process::{spawn_process, wait_process};
+use crate::orchestrator::config::{Step, step_duration_ms, step_processes, step_stdout};
+use crate::orchestrator::process::{kill_process, spawn_process, wait_process};
 use crate::orchestrator::source::resolve_source;
 use std::error::Error;
 use std::path::Path;
 use std::process::Command;
+use std::thread;
+use std::time::Duration;
 
 pub(crate) fn run(step: &Step, cache: &CacheContext) -> Result<(), Box<dyn Error>> {
-    let count = task_count(step)?;
     let processes = step_processes(step);
     let stdout_enabled = step_stdout(step);
+    let duration_ms = step_duration_ms(step);
     let source = resolve_source(step, Path::new("runtimes/golang/main.go"), "go", cache)?;
+    let args = step.args.as_deref().unwrap_or(&[]);
 
-    let count_label = count
-        .map(|value| value.to_string())
-        .unwrap_or_else(|| "none".to_string());
-    println!("golang: processes={} count={}", processes, count_label);
+    println!("golang: processes={} args={}", processes, args.join(" "));
 
     let step_id = step.id.as_deref().unwrap_or("unknown");
     let log_label = format!("step={} runtime=golang", step_id);
 
     let mut children = Vec::new();
+    let mut pids = Vec::new();
     for _ in 0..processes {
         let mut command = Command::new("go");
         command.arg("run").arg(&source.path);
-        if let Some(value) = count {
-            command.arg("--count").arg(value.to_string());
+        if !args.is_empty() {
+            command.args(args);
         }
-        let cmd_display = if let Some(value) = count {
-            format!("go run {} --count {}", source.path.display(), value)
-        } else {
+        let cmd_display = if args.is_empty() {
             format!("go run {}", source.path.display())
+        } else {
+            format!("go run {} {}", source.path.display(), args.join(" "))
         };
         let child = spawn_process(command, &log_label, &cmd_display, stdout_enabled)?;
+        pids.push(child.pid());
         children.push(child);
     }
 
-    for child in children {
-        wait_process(child, &log_label)?;
+    if let Some(duration) = duration_ms {
+        thread::sleep(Duration::from_millis(duration));
+        for child in &mut children {
+            let _ = kill_process(child);
+        }
     }
 
+    for child in children {
+        wait_process(child, &log_label, duration_ms.is_some())?;
+    }
+
+    println!("pids={}", join_pids(&pids));
     println!("golang: done");
 
     Ok(())
+}
+
+fn join_pids(pids: &[u32]) -> String {
+    pids.iter()
+        .map(|pid| pid.to_string())
+        .collect::<Vec<_>>()
+        .join(",")
 }

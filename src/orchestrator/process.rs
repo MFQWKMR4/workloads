@@ -11,6 +11,12 @@ pub(crate) struct ChildTracker {
     stdout: Option<JoinHandle<io::Result<()>>>,
 }
 
+impl ChildTracker {
+    pub(crate) fn pid(&self) -> u32 {
+        self.pid
+    }
+}
+
 pub(crate) fn spawn_process(
     mut command: Command,
     log_label: &str,
@@ -51,6 +57,7 @@ pub(crate) fn spawn_process(
 pub(crate) fn wait_process(
     mut tracker: ChildTracker,
     log_label: &str,
+    allow_failure: bool,
 ) -> Result<(), Box<dyn Error>> {
     let status = tracker.child.wait()?;
     let duration_ms = tracker.started_at.elapsed().as_millis();
@@ -63,12 +70,17 @@ pub(crate) fn wait_process(
     if let Some(handle) = tracker.stdout.take() {
         let _ = handle.join();
     }
-    if !status.success() {
+    if !allow_failure && !status.success() {
         return Err(Box::new(io::Error::new(
             io::ErrorKind::Other,
             format!("process pid {} exited with {}", tracker.pid, code),
         )));
     }
+    Ok(())
+}
+
+pub(crate) fn kill_process(tracker: &mut ChildTracker) -> Result<(), Box<dyn Error>> {
+    tracker.child.kill()?;
     Ok(())
 }
 

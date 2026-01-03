@@ -12,9 +12,9 @@ pub(crate) struct Step {
     pub(crate) id: Option<String>,
     pub(crate) runtime: String,
     pub(crate) parallel: Option<Parallel>,
-    pub(crate) task: Option<Task>,
     pub(crate) location: Option<String>,
     pub(crate) stdout: Option<bool>,
+    pub(crate) duration_ms: Option<u64>,
     pub(crate) exec: Option<String>,
     pub(crate) args: Option<Vec<String>>,
     pub(crate) command: Option<String>,
@@ -27,19 +27,6 @@ pub(crate) struct Step {
 pub(crate) struct Parallel {
     pub(crate) processes: Option<u32>,
     pub(crate) threads: Option<u32>,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct Task {
-    #[serde(rename = "type")]
-    pub(crate) task_type: String,
-    pub(crate) settings: TaskSettings,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct TaskSettings {
-    pub(crate) count: Option<u64>,
-    pub(crate) duration_ms: Option<u64>,
 }
 
 #[derive(Debug)]
@@ -81,6 +68,14 @@ pub(crate) fn validate_config(config: &Config) -> Result<(), Box<dyn Error>> {
             }
         }
 
+        if let Some(duration) = step.duration_ms {
+            if duration == 0 {
+                return Err(Box::new(ConfigError(
+                    "duration_ms must be > 0".to_string(),
+                )));
+            }
+        }
+
         if runtime == "bin" {
             if step.exec.as_deref().unwrap_or("").is_empty() {
                 return Err(Box::new(ConfigError(
@@ -94,28 +89,11 @@ pub(crate) fn validate_config(config: &Config) -> Result<(), Box<dyn Error>> {
                 )));
             }
         } else {
-            if step.location.is_none() {
-                let task = step
-                    .task
-                    .as_ref()
-                    .ok_or_else(|| ConfigError("task must be set".to_string()))?;
-                validate_task(task)?;
-            } else if let Some(task) = &step.task {
-                validate_task(task)?;
-            }
+            // No task validation: runtime behavior is defined by the source file.
         }
     }
 
     Ok(())
-}
-
-pub(crate) fn task_count(step: &Step) -> Result<Option<u64>, Box<dyn Error>> {
-    let task = match &step.task {
-        Some(task) => task,
-        None => return Ok(None),
-    };
-    validate_task(task)?;
-    Ok(task.settings.count)
 }
 
 pub(crate) fn step_processes(step: &Step) -> u32 {
@@ -129,16 +107,6 @@ pub(crate) fn step_stdout(step: &Step) -> bool {
     step.stdout.unwrap_or(false)
 }
 
-fn validate_task(task: &Task) -> Result<(), Box<dyn Error>> {
-    if task.task_type != "counter" {
-        return Err(Box::new(ConfigError(format!(
-            "task type '{}' is not supported yet",
-            task.task_type
-        ))));
-    }
-    let count = task.settings.count.unwrap_or(0);
-    if count == 0 {
-        return Err(Box::new(ConfigError("task.settings.count must be > 0".to_string())));
-    }
-    Ok(())
+pub(crate) fn step_duration_ms(step: &Step) -> Option<u64> {
+    step.duration_ms
 }

@@ -33,3 +33,6 @@ designdoc/
 # already existing elements were commented out
 
 #/target
+
+perf.data*
+*.dat

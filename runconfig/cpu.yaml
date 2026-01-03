@@ -1,0 +1,6 @@
+steps:
+  - id: nodejs-cpu
+    runtime: node
+    location: runtimes/node/cpu.js
+    duration_ms: 30000
+ 

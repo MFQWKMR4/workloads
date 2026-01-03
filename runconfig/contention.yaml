@@ -1,0 +1,8 @@
+steps:
+  - id: go-contention
+    runtime: golang
+    location: runtimes/golang/main.go
+    parallel:
+      processes: 1
+    duration_ms: 100000
+    args: ["--workers", "16", "--hold-us", "50"]
