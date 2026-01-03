@@ -1,0 +1,29 @@
+steps:
+  - id: python-sample
+    runtime: python
+    parallel:
+      processes: 2
+    task:
+      type: counter
+      settings:
+        count: 10000
+  - id: nodejs-sample
+    runtime: node
+    parallel:
+      processes: 2
+    task:
+      type: counter
+      settings:
+        count: 10000
+  - id: go-sample
+    runtime: golang
+    parallel:
+      processes: 2
+    task:
+      type: counter
+      settings:
+        count: 10000
+  - id: nodejs-remote
+    runtime: node
+    location: https://gist.githubusercontent.com/MFQWKMR4/7af188c060f3d24128fbd06a123c63f3/raw/c946731695267c9f9d186be38c445c54d400b41b/test.js
+ 
