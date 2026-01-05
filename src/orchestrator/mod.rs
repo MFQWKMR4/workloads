@@ -78,21 +78,6 @@ pub fn list_available() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub fn prepare(config_path: &Path) -> Result<(), Box<dyn Error>> {
-    let loaded = load_config(config_path)?;
-    validate_config(&loaded.config)?;
-    for step in &loaded.config.steps {
-        ensure_runtime_available(&step.runtime)?;
-    }
-
-    for step in &loaded.config.steps {
-        println!("prepare: runtime={}", step.runtime);
-    }
-    println!("prepare: python does not require build steps");
-
-    Ok(())
-}
-
 pub fn generate(config_path: &Path) -> Result<(), Box<dyn Error>> {
     let loaded = load_config(config_path)?;
     validate_config(&loaded.config)?;
