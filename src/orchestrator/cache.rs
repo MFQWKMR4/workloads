@@ -1,6 +1,7 @@
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 
+#[derive(Clone)]
 pub(crate) struct CacheContext {
     pub(crate) config_hash: String,
     pub(crate) base_dir: PathBuf,

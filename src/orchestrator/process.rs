@@ -58,14 +58,19 @@ pub(crate) fn wait_process(
     mut tracker: ChildTracker,
     log_label: &str,
     allow_failure: bool,
-) -> Result<(), Box<dyn Error>> {
+) -> Result<i32, Box<dyn Error>> {
     let status = tracker.child.wait()?;
     let duration_ms = tracker.started_at.elapsed().as_millis();
     let ts = unix_millis();
-    let code = status.code().map(|value| value.to_string()).unwrap_or_else(|| "signal".to_string());
+    let exit_code = status.code().unwrap_or(-1);
+    let code_label = if exit_code == -1 {
+        "signal".to_string()
+    } else {
+        exit_code.to_string()
+    };
     println!(
         "end pid={} ts={} {} duration_ms={} exit={}",
-        tracker.pid, ts, log_label, duration_ms, code
+        tracker.pid, ts, log_label, duration_ms, code_label
     );
     if let Some(handle) = tracker.stdout.take() {
         let _ = handle.join();
@@ -73,10 +78,10 @@ pub(crate) fn wait_process(
     if !allow_failure && !status.success() {
         return Err(Box::new(io::Error::new(
             io::ErrorKind::Other,
-            format!("process pid {} exited with {}", tracker.pid, code),
+            format!("process pid {} exited with {}", tracker.pid, code_label),
         )));
     }
-    Ok(())
+    Ok(exit_code)
 }
 
 pub(crate) fn kill_process(tracker: &mut ChildTracker) -> Result<(), Box<dyn Error>> {

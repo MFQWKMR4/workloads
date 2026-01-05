@@ -1,14 +1,31 @@
 steps:
+  - id: mpstat
+    runtime: shell
+    command: p"exec mpstat -P ALL 1 > tmp_workspace/mpstat.log"
+    duration_ms: 20000
+
+  - id: sarq
+    runtime: shell
+    command: "exec sar -q 1 > tmp_workspace/sarq.log"
+    duration_ms: 20000
+
   - id: go-contention
     runtime: golang
     location: https://raw.githubusercontent.com/MFQWKMR4/my-workload-collection/refs/heads/main/futex-contention/main.go?token=GHSAT0AAAAAADNFOBE24DPPJTBSL34E3WXW2K3B6MA
     parallel:
       processes: 1
-    # duration_ms: 120000
-    wrapper: "strace -f -c"
+    wrapper: "strace -f -c -o tmp_workspace/stat.txt"
     env:
       GOMAXPROCS: 16
       WORKERS: 64 
       HOGS: 8
       HOLD_MS: 50
-      DURATION_MS: 100000
+      DURATION_MS: 15000
+
+  - id: pidstat
+    runtime: shell
+    depends_on:
+      - id: go-contention
+        when: started
+    command: p"exec pidstat -p {go-contention:pid} -u 1 > tmp_workspace/pidstat.log"
+    duration_ms: 15000
