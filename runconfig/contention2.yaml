@@ -20,7 +20,7 @@ steps:
       WORKERS: 64 
       HOGS: 8
       HOLD_MS: 50
-      DURATION_MS: 15000
+      DURATION_MS: 15001
 
   - id: pidstat
     runtime: shell

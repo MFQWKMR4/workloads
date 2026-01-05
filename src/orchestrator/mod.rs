@@ -123,7 +123,7 @@ struct LoadedConfig {
 fn load_config(config_path: &Path) -> Result<LoadedConfig, Box<dyn Error>> {
     let content = fs::read_to_string(config_path)?;
     let cache = cache_context(&content);
-    fs::create_dir_all(&cache.config_dir)?;
+    fs::create_dir_all(&cache.source_dir)?;
     fs::create_dir_all(&cache.url_dir)?;
     let config: Config = serde_yaml::from_str(&content)?;
     Ok(LoadedConfig { config, cache })

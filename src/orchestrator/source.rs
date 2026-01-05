@@ -43,16 +43,16 @@ pub(crate) fn resolve_source(
             std::fs::write(&url_cache_path, bytes)?;
         }
 
-        let config_cache_path = cache.config_source_path(location, extension);
-        if !config_cache_path.exists() {
-            if let Some(parent) = config_cache_path.parent() {
+        let source_cache_path = cache.config_source_path(location, extension);
+        if !source_cache_path.exists() {
+            if let Some(parent) = source_cache_path.parent() {
                 std::fs::create_dir_all(parent)?;
             }
-            std::fs::copy(&url_cache_path, &config_cache_path)?;
+            std::fs::copy(&url_cache_path, &source_cache_path)?;
         }
 
         Ok(ResolvedSource {
-            path: config_cache_path,
+            path: source_cache_path,
             cleanup: false,
         })
     } else {

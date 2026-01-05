@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 pub(crate) struct CacheContext {
     pub(crate) config_hash: String,
     pub(crate) base_dir: PathBuf,
-    pub(crate) config_dir: PathBuf,
+    pub(crate) source_dir: PathBuf,
     pub(crate) url_dir: PathBuf,
 }
 
@@ -19,28 +19,28 @@ impl CacheContext {
 
     pub(crate) fn config_source_path(&self, url: &str, extension: &str) -> PathBuf {
         let url_hash = hash_string(url);
-        self.config_dir
-            .join("sources")
-            .join(format!("{url_hash}.{extension}"))
+        self.source_dir
+            .join(url_hash)
+            .join(format!("source.{extension}"))
     }
 
     pub(crate) fn build_path_for_source(&self, source_path: &Path) -> PathBuf {
         let key = source_path.to_string_lossy();
         let hash = hash_string(&key);
-        self.config_dir.join("build").join(hash)
+        self.source_dir.join(hash).join("build")
     }
 }
 
 pub(crate) fn cache_context(config_content: &str) -> CacheContext {
     let config_hash = hash_string(config_content);
     let base_dir = cache_base_dir().join("tmp_workspace");
-    let config_dir = base_dir.join("config").join(&config_hash);
+    let source_dir = base_dir.join("source");
     let url_dir = base_dir.join("url");
 
     CacheContext {
         config_hash,
         base_dir,
-        config_dir,
+        source_dir,
         url_dir,
     }
 }

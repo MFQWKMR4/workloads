@@ -120,6 +120,4 @@ steps:
 ## Cache and workspace
 - Base dir: `./tmp_workspace/`
 - URL cache: `./tmp_workspace/url/<url-hash>/source.<ext>`
-- Config cache: `./tmp_workspace/config/<config-hash>/`
-
-
+- Source cache: `./tmp_workspace/source/<location-hash>/`
