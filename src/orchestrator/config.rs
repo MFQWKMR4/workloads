@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
 
@@ -15,6 +16,8 @@ pub(crate) struct Step {
     pub(crate) location: Option<String>,
     pub(crate) stdout: Option<bool>,
     pub(crate) duration_ms: Option<u64>,
+    pub(crate) env: Option<HashMap<String, String>>,
+    pub(crate) wrapper: Option<String>,
     pub(crate) exec: Option<String>,
     pub(crate) args: Option<Vec<String>>,
     pub(crate) command: Option<String>,
@@ -109,4 +112,11 @@ pub(crate) fn step_stdout(step: &Step) -> bool {
 
 pub(crate) fn step_duration_ms(step: &Step) -> Option<u64> {
     step.duration_ms
+}
+
+pub(crate) fn step_env(step: &Step) -> Vec<(String, String)> {
+    step.env
+        .as_ref()
+        .map(|env| env.iter().map(|(k, v)| (k.clone(), v.clone())).collect())
+        .unwrap_or_default()
 }

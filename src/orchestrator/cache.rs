@@ -1,5 +1,5 @@
 use sha2::{Digest, Sha256};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub(crate) struct CacheContext {
     pub(crate) config_hash: String,
@@ -22,11 +22,17 @@ impl CacheContext {
             .join("sources")
             .join(format!("{url_hash}.{extension}"))
     }
+
+    pub(crate) fn build_path_for_source(&self, source_path: &Path) -> PathBuf {
+        let key = source_path.to_string_lossy();
+        let hash = hash_string(&key);
+        self.config_dir.join("build").join(hash)
+    }
 }
 
 pub(crate) fn cache_context(config_content: &str) -> CacheContext {
     let config_hash = hash_string(config_content);
-    let base_dir = cache_base_dir().join("wl");
+    let base_dir = cache_base_dir().join("tmp_workspace");
     let config_dir = base_dir.join("config").join(&config_hash);
     let url_dir = base_dir.join("url");
 
@@ -39,13 +45,7 @@ pub(crate) fn cache_context(config_content: &str) -> CacheContext {
 }
 
 fn cache_base_dir() -> PathBuf {
-    if let Ok(dir) = std::env::var("XDG_CACHE_HOME") {
-        return PathBuf::from(dir);
-    }
-    if let Ok(home) = std::env::var("HOME") {
-        return PathBuf::from(home).join(".cache");
-    }
-    std::env::temp_dir().join("wl-cache")
+    std::env::current_dir().unwrap_or_else(|_| std::env::temp_dir())
 }
 
 fn hash_string(value: &str) -> String {

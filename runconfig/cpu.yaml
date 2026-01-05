@@ -3,4 +3,6 @@ steps:
     runtime: node
     location: runtimes/node/cpu.js
     duration_ms: 30000
+    env:
+      WL_ITERATIONS: "0"
  

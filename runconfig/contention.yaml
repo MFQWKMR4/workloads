@@ -5,4 +5,7 @@ steps:
     parallel:
       processes: 1
     duration_ms: 100000
-    args: ["--workers", "16", "--hold-us", "50"]
+    wrapper: "strace -f -c"
+    env:
+      WL_WORKERS: "16"
+      WL_HOLD_US: "50"

@@ -4,22 +4,33 @@ steps:
     parallel:
       processes: 2
     duration_ms: 10000
-    args: ["--chunk-mb", "32", "--steps", "4", "--hold-ms", "500", "--release-ms", "500"]
+    env:
+      WL_CHUNK_MB: "32"
+      WL_STEPS: "4"
+      WL_HOLD_MS: "500"
+      WL_RELEASE_MS: "500"
   - id: nodejs-sample
     runtime: node
     parallel:
       processes: 2
     duration_ms: 10000
-    args: ["--iterations", "100", "--size", "4096", "--fsync", "true"]
+    env:
+      WL_ITERATIONS: "100"
+      WL_SIZE: "4096"
+      WL_FSYNC: "true"
   - id: go-sample
     runtime: golang
     parallel:
       processes: 2
     duration_ms: 10000
-    args: ["--workers", "8", "--hold-us", "50"]
+    env:
+      WL_WORKERS: "8"
+      WL_HOLD_US: "50"
   - id: nodejs-remote
     runtime: node
     location: https://gist.githubusercontent.com/MFQWKMR4/7af188c060f3d24128fbd06a123c63f3/raw/c946731695267c9f9d186be38c445c54d400b41b/test.js
     duration_ms: 10000
-    args: ["--iterations", "100", "--size", "4096", "--fsync", "true"]
-
+    env:
+      WL_ITERATIONS: "100"
+      WL_SIZE: "4096"
+      WL_FSYNC: "true"

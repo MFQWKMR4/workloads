@@ -36,3 +36,6 @@ designdoc/
 
 perf.data*
 *.dat
+
+tmp_workspace/
+

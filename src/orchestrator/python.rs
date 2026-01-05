@@ -1,10 +1,10 @@
 use crate::orchestrator::cache::CacheContext;
-use crate::orchestrator::config::{Step, step_duration_ms, step_processes, step_stdout};
+use crate::orchestrator::config::{Step, step_duration_ms, step_env, step_processes, step_stdout};
 use crate::orchestrator::process::{kill_process, spawn_process, wait_process};
 use crate::orchestrator::source::resolve_source;
+use crate::orchestrator::wrapper::wrap_command;
 use std::error::Error;
 use std::path::Path;
-use std::process::Command;
 use std::thread;
 use std::time::Duration;
 
@@ -14,6 +14,7 @@ pub(crate) fn run(step: &Step, cache: &CacheContext) -> Result<(), Box<dyn Error
     let duration_ms = step_duration_ms(step);
     let source = resolve_source(step, Path::new("runtimes/python/main.py"), "py", cache)?;
     let args = step.args.as_deref().unwrap_or(&[]);
+    let envs = step_env(step);
 
     println!("python: processes={} args={}", processes, args.join(" "));
 
@@ -23,21 +24,17 @@ pub(crate) fn run(step: &Step, cache: &CacheContext) -> Result<(), Box<dyn Error
     let mut children = Vec::new();
     let mut pids = Vec::new();
     for _ in 0..processes {
-        let mut command = Command::new("python3");
-        command.arg(&source.path);
-        if !args.is_empty() {
-            command.args(args);
+        let mut base = vec![
+            "python3".to_string(),
+            source.path.to_string_lossy().to_string(),
+        ];
+        base.extend(args.iter().cloned());
+        let wrapped = wrap_command(step, &base);
+        let mut command = wrapped.command;
+        for (key, value) in &envs {
+            command.env(key, value);
         }
-        let cmd_display = if args.is_empty() {
-            format!("python3 {}", source.path.display())
-        } else {
-            format!(
-                "python3 {} {}",
-                source.path.display(),
-                args.join(" ")
-            )
-        };
-        let child = spawn_process(command, &log_label, &cmd_display, stdout_enabled)?;
+        let child = spawn_process(command, &log_label, &wrapped.display, stdout_enabled)?;
         pids.push(child.pid());
         children.push(child);
     }

@@ -12,7 +12,9 @@ function parseArgs(argv) {
 
 function main() {
   const args = parseArgs(process.argv);
-  const iterations = Number(args.get("--iterations") ?? 0);
+  const iterations = Number(
+    args.get("--iterations") ?? process.env.WL_ITERATIONS ?? 0
+  );
 
   if (!Number.isFinite(iterations) || iterations < 0) {
     console.error("invalid --iterations");

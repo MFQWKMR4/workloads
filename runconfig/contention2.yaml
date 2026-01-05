@@ -1,0 +1,14 @@
+steps:
+  - id: go-contention
+    runtime: golang
+    location: https://raw.githubusercontent.com/MFQWKMR4/my-workload-collection/refs/heads/main/futex-contention/main.go?token=GHSAT0AAAAAADNFOBE24DPPJTBSL34E3WXW2K3B6MA
+    parallel:
+      processes: 1
+    # duration_ms: 120000
+    wrapper: "strace -f -c"
+    env:
+      GOMAXPROCS: 16
+      WORKERS: 64 
+      HOGS: 8
+      HOLD_MS: 50
+      DURATION_MS: 100000

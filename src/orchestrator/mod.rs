@@ -3,6 +3,7 @@ mod cache;
 mod process;
 mod samples;
 mod source;
+mod wrapper;
 mod shell;
 mod bin;
 mod golang;

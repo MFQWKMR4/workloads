@@ -1,7 +1,9 @@
-use crate::orchestrator::config::{ConfigError, Step, step_duration_ms, step_processes, step_stdout};
+use crate::orchestrator::config::{
+    ConfigError, Step, step_duration_ms, step_env, step_processes, step_stdout,
+};
 use crate::orchestrator::process::{kill_process, spawn_process, wait_process};
+use crate::orchestrator::wrapper::wrap_command;
 use std::error::Error;
-use std::process::Command;
 use std::thread;
 use std::time::Duration;
 
@@ -13,24 +15,25 @@ pub(crate) fn run(step: &Step) -> Result<(), Box<dyn Error>> {
     let processes = step_processes(step);
     let stdout_enabled = step_stdout(step);
     let duration_ms = step_duration_ms(step);
+    let envs = step_env(step);
 
     let args: &[String] = step.args.as_deref().unwrap_or(&[]);
     println!("bin: processes={} exec={}", processes, exec);
 
     let step_id = step.id.as_deref().unwrap_or("unknown");
     let log_label = format!("step={} runtime=bin", step_id);
-    let cmd_display = if args.is_empty() {
-        exec.to_string()
-    } else {
-        format!("{} {}", exec, args.join(" "))
-    };
+    let mut base = vec![exec.to_string()];
+    base.extend(args.iter().cloned());
 
     let mut children = Vec::new();
     let mut pids = Vec::new();
     for _ in 0..processes {
-        let mut c = Command::new(exec);
-        c.args(args);
-        let child = spawn_process(c, &log_label, &cmd_display, stdout_enabled)?;
+        let wrapped = wrap_command(step, &base);
+        let mut command = wrapped.command;
+        for (key, value) in &envs {
+            command.env(key, value);
+        }
+        let child = spawn_process(command, &log_label, &wrapped.display, stdout_enabled)?;
         pids.push(child.pid());
         children.push(child);
     }

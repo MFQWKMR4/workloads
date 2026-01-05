@@ -14,11 +14,14 @@ function parseArgs(argv) {
 
 function main() {
   const args = parseArgs(process.argv);
-  const iterations = Number(args.get("--iterations") ?? 100);
-  const size = Number(args.get("--size") ?? 4096);
-  const path = args.get("--path") ?? "io_wait.dat";
-  const fsync = (args.get("--fsync") ?? "true") !== "false";
-  const sleepMs = Number(args.get("--sleep-ms") ?? 0);
+  const iterations = Number(
+    args.get("--iterations") ?? process.env.WL_ITERATIONS ?? 100
+  );
+  const size = Number(args.get("--size") ?? process.env.WL_SIZE ?? 4096);
+  const path = args.get("--path") ?? process.env.WL_PATH ?? "io_wait.dat";
+  const fsync =
+    (args.get("--fsync") ?? process.env.WL_FSYNC ?? "true") !== "false";
+  const sleepMs = Number(args.get("--sleep-ms") ?? process.env.WL_SLEEP_MS ?? 0);
 
   if (!Number.isFinite(iterations) || iterations <= 0) {
     console.error("invalid --iterations");
